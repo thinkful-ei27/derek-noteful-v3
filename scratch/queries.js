@@ -12,7 +12,12 @@ const Note = require('../models/note');
 //     let filter = {};
 
 //     if (searchTerm) {
-//       filter.title = { $regex: searchTerm, $options: 'i' };
+//       filter = {
+//         $or : [
+//           { title: { $regex: searchTerm, $options: 'i' } },
+//           { content: { $regex: searchTerm, $options: 'i' } }
+//         ]
+//       };
 //     }
 
 //     return Note.find(filter).sort({ updatedAt: 'desc' });
