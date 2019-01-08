@@ -89,6 +89,12 @@ router.put('/:id', (req, res, next) => {
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
+  const { id } = req.params;
+
+  Note
+    .findByIdAndDelete(id)
+    .then(() => res.sendStatus(204))
+    .catch(err => next(err));
 
   console.log('Delete a Note');
   res.sendStatus(204);
