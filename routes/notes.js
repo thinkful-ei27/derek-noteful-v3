@@ -13,7 +13,7 @@ router.get('/', (req, res, next) => {
 
   if (searchTerm) {
     filter = {
-      $or : [
+      $or: [
         { title: { $regex: searchTerm, $options: 'i' } },
         { content: { $regex: searchTerm, $options: 'i' } }
       ]
@@ -23,34 +23,68 @@ router.get('/', (req, res, next) => {
   Note
     .find(filter)
     .sort({ updatedAt: 'desc' })
-    .then(notes => {
-      res.json(notes);
-    })
+    .then(notes => res.json(notes))
     .catch(err => next(err));
 });
 
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
+  const { id } = req.params;
 
-  console.log('Get a Note');
-  res.json({ id: 1, title: 'Temp 1' });
-
+  Note
+    .findById(id)
+    .then(note => res.json(note))
+    .catch(err => next(err));
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
+  const { title, content } = req.body;
 
-  console.log('Create a Note');
-  res.location('path/to/new/document').status(201).json({ id: 2, title: 'Temp 2' });
+  const newNote = { title, content };
 
+  /***** Never trust users - validate input *****/
+  if (!newNote.title) {
+    const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  Note
+    .create(newNote)
+    .then(note => {
+      res
+        .location(`${req.originalUrl}/${note.id}`)
+        .status(201)
+        .json(note);
+    })
+    .catch(err => next(err));
 });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
+  const { id } = req.params;
 
-  console.log('Update a Note');
-  res.json({ id: 1, title: 'Updated Temp 1' });
+  const updateObj = {};
+  const updateableFields = ['title', 'content'];
 
+  updateableFields.forEach(field => {
+    if (field in req.body) {
+      updateObj[field] = req.body[field];
+    }
+  });
+
+  /***** Never trust users - validate input *****/
+  if (!updateObj.title) {
+    const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  Note
+    .findByIdAndUpdate(id, updateObj)
+    .then(note => res.json(note))
+    .catch(err => next(err));
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
