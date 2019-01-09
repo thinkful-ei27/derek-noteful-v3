@@ -8,14 +8,15 @@ const router = express.Router();
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
   const { searchTerm } = req.query;
+  const regex = new RegExp(searchTerm, 'i');
 
   let filter = {};
 
   if (searchTerm) {
     filter = {
       $or: [
-        { title: { $regex: searchTerm, $options: 'i' } },
-        { content: { $regex: searchTerm, $options: 'i' } }
+        { title: regex },
+        { content: regex }
       ]
     };
   }
@@ -33,7 +34,9 @@ router.get('/:id', (req, res, next) => {
 
   Note
     .findById(id)
-    .then(note => res.json(note))
+    .then(note => {
+      return note ? res.json(note) : next();
+    })
     .catch(err => next(err));
 });
 
@@ -95,9 +98,6 @@ router.delete('/:id', (req, res, next) => {
     .findByIdAndDelete(id)
     .then(() => res.sendStatus(204))
     .catch(err => next(err));
-
-  console.log('Delete a Note');
-  res.sendStatus(204);
 });
 
 module.exports = router;
