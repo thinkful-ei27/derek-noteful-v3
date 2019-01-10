@@ -6,7 +6,11 @@ const router = express.Router();
 
 // GET/READ ALL ITEMS
 router.get('/', (req, res, next) => {
-  res.sendStatus('200');
+  Folder
+    .find()
+    .sort({ name: 'asc' })
+    .then(folders => res.json(folders))
+    .catch(err => next(err));
 });
 
 // GET/READ A SINGLE ITEM

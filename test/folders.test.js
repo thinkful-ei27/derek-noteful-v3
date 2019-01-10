@@ -30,15 +30,66 @@ describe('Folders Integration Tests', function () {
 
   after(function () {
     return mongoose.disconnect();
-  }); 
+  });
 
   describe('GET /api/folders', function () {
-    it('should return the correct number of folders');
-    it('should return a list with the correct fields sorted by name');
+    it('should return the correct number of folders', function () {
+      return Promise.all([
+        Folder.find(),
+        chai.request(app).get('/api/folders')
+      ])
+        // 3) then compare database results to API response
+        .then(([data, res]) => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('array');
+          expect(res.body).to.have.length(data.length);
+        });
+    });
+
+    it('should return a list with the correct fields sorted by name', function () {
+      return Promise.all([
+        Folder.find().sort({ name: 'asc' }),
+        chai.request(app).get('/api/folders')
+      ])
+        .then(([data, res]) => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(data.length);
+          res.body.forEach(function (item, i) {
+            expect(item).to.be.a('object');
+            expect(item).to.include.all.keys('id', 'name', 'createdAt', 'updatedAt');
+            expect(item.id).to.equal(data[i].id);
+            expect(item.name).to.equal(data[i].name);
+            expect(new Date(item.createdAt)).to.deep.equal(data[i].createdAt);
+            expect(new Date(item.updatedAt)).to.deep.equal(data[i].updatedAt);
+          });
+        });
+    });
   });
 
   describe('GET /api/folders/:id', function () {
-    it('should return the correct folder');
+    it('should return the correct folder', function () {
+      let data;
+      return Folder.findOne()
+        .then(_data => {
+          data = _data;
+          return chai.request(app).get(`/api/folders/${data.id}`);
+        })
+        .then(res => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+
+          expect(res.body.id).to.equal(data.id);
+          expect(res.body.name).to.equal(data.name);
+          expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
+          expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
+        });
+    });
+
     it('should return a 404 error when it cannot find a folder');
   });
 
