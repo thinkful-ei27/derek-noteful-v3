@@ -16,7 +16,7 @@ chai.use(chaiHttp);
 
 describe('Notes Integration Tests', function () {
   before(function () {
-    return mongoose.connect(TEST_MONGODB_URI, { useNewUrlParser: true })
+    return mongoose.connect(TEST_MONGODB_URI, { useNewUrlParser: true, useFindAndModify: false })
       .then(() => mongoose.connection.db.dropDatabase());
   });
 
@@ -46,6 +46,28 @@ describe('Notes Integration Tests', function () {
           expect(res).to.be.json;
           expect(res.body).to.be.an('array');
           expect(res.body).to.have.length(data.length);
+        });
+    });
+
+    it('should return a list with the correct right fields', function () {
+      return Promise.all([
+        Note.find().sort({ updatedAt: 'desc' }),
+        chai.request(app).get('/api/notes')
+      ])
+        .then(([data, res]) => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(data.length);
+          res.body.forEach(function (item, i) {
+            expect(item).to.be.a('object');
+            expect(item).to.include.all.keys('id', 'title', 'createdAt', 'updatedAt');
+            expect(item.id).to.equal(data[i].id);
+            expect(item.title).to.equal(data[i].title);
+            expect(item.content).to.equal(data[i].content);
+            expect(new Date(item.createdAt)).to.deep.equal(data[i].createdAt);
+            expect(new Date(item.updatedAt)).to.deep.equal(data[i].updatedAt);
+          });
         });
     });
 
@@ -85,7 +107,7 @@ describe('Notes Integration Tests', function () {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId');
 
           // 3) then compare database results to API response
           expect(res.body.id).to.equal(data.id);
@@ -172,7 +194,7 @@ describe('Notes Integration Tests', function () {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId');
 
           return Note.findById(res.body.id);
         })

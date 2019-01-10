@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const mongoose = require('mongoose');
 const Note = require('../models/note');
 
 const router = express.Router();
@@ -31,6 +32,12 @@ router.get('/', (req, res, next) => {
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
 
   Note
     .findById(id)
@@ -78,6 +85,12 @@ router.put('/:id', (req, res, next) => {
   });
 
   /***** Never trust users - validate input *****/
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
   if (!updateObj.title) {
     const err = new Error('Missing `title` in request body');
     err.status = 400;
@@ -93,6 +106,12 @@ router.put('/:id', (req, res, next) => {
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
 
   Note
     .findByIdAndDelete(id)
