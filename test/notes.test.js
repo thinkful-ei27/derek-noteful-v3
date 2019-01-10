@@ -8,8 +8,9 @@ const app = require('../server');
 const { TEST_MONGODB_URI } = require('../config');
 
 const Note = require('../models/note');
+const Folder = require('../models/folders');
 
-const { notes } = require('../db/data');
+const { notes, folders } = require('../db/data');
 
 const expect = chai.expect;
 chai.use(chaiHttp);
@@ -21,7 +22,11 @@ describe('Notes Integration Tests', function () {
   });
 
   beforeEach(function () {
-    return Note.insertMany(notes);
+    return Promise.all([
+      Note.insertMany(notes),
+      Folder.insertMany(folders),
+      Folder.createIndexes()
+    ]);
   });
 
   afterEach(function () {
@@ -88,6 +93,26 @@ describe('Notes Integration Tests', function () {
             expect(note).to.satisfy(note => {
               return note.title.toLowerCase().includes(searchTerm) || note.content.toLowerCase().includes(searchTerm);
             });
+          });
+        });
+    });
+
+    it('should only return notes within a specific folder', function () {
+      let folderId;
+
+      return Folder.findOne()
+        .then(folder => {
+          folderId = folder.id;
+
+          return Promise.all([
+            Note.find({ folderId: folder.id }),
+            chai.request(app).get(`/api/notes/?folderId=${folder.id}`)
+          ]);
+        })
+        .then(([data, res]) => {
+          expect(res.body).to.have.length(data.length);
+          res.body.forEach(note => {
+            expect(note.folderId).to.equal(folderId);
           });
         });
     });

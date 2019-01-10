@@ -9,8 +9,9 @@ const app = require('../server');
 const { TEST_MONGODB_URI } = require('../config');
 
 const Folder = require('../models/folders');
+const Note = require('../models/note');
 
-const { folders } = require('../db/data');
+const { notes, folders } = require('../db/data');
 
 chai.use(chaiHttp);
 
@@ -22,6 +23,7 @@ describe('Folders Integration Tests', function () {
 
   beforeEach(function () {
     return Promise.all([
+      Note.insertMany(notes),
       Folder.insertMany(folders),
       Folder.createIndexes()
     ]);
@@ -77,7 +79,6 @@ describe('Folders Integration Tests', function () {
       let data;
       return Folder.findOne()
         .then(_data => {
-          console.log(_data);
           data = _data;
           return chai.request(app).get(`/api/folders/${data.id}`);
         })
@@ -269,6 +270,32 @@ describe('Folders Integration Tests', function () {
           expect(res).to.not.exist;
         });
     });
+
+    it('should remove all notes in the folder', function () {
+      let folder;
+
+      return Folder.findOne()
+        .then(data => {
+          folder = data;
+
+          return Note.countDocuments({ folderId: folder.id });
+        })
+        .then(count => {
+          expect(count).to.not.equal(0);
+
+          return chai.request(app)
+            .del(`/api/folders/${folder.id}`);
+        })
+        .then(res => {
+          expect(res).to.have.status(204);
+
+          return Note.countDocuments({ folderId: folder.id });
+        })
+        .then(newCount => {
+          expect(newCount).to.equal(0);
+        });
+    });
+
     it('should respond with an error if given a bad id', function () {
       return chai.request(app)
         .del('/api/folders/999')
