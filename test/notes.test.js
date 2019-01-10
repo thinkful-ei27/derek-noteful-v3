@@ -154,23 +154,28 @@ describe('Notes Integration Tests', function () {
 
   describe('POST /api/notes', function () {
     it('should create and return a new item when provided with valid data', function () {
-      const newNote = {
-        'title': 'Test note created by chai',
-        'content': 'This note was created for testing purposes only'
-      };
-
       let res;
-      // 1) First, call the API
-      return chai.request(app)
-        .post('/api/notes')
-        .send(newNote)
+      Folder.findOne()
+        .then(folder => {
+
+          const newNote = {
+            'title': 'Test note created by chai',
+            'content': 'This note was created for testing purposes only',
+            'folderId': folder.id
+          };
+
+          // 1) First, call the API
+          return chai.request(app)
+            .post('/api/notes')
+            .send(newNote);
+        })
         .then(function (_res) {
           res = _res;
           expect(res).to.have.status(201);
           expect(res).to.have.header('location');
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId');
           // 2) then call the database
           return Note.findById(res.body.id);
         })
@@ -182,9 +187,9 @@ describe('Notes Integration Tests', function () {
           expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
           expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
         });
-
     });
-    it('should throw an error when provided with invalid data', function () {
+
+    it('should throw an error when `title` is missing', function () {
       const newNote = { content: 'This note does not have a title' };
       return chai.request(app)
         .post('/api/notes')
@@ -195,6 +200,25 @@ describe('Notes Integration Tests', function () {
           expect(res.body).to.be.an('object');
           expect(res.body).to.have.keys('status', 'message');
           expect(res.body.message).to.equal('Missing `title` in request body');
+        });
+    });
+
+    it('should throw an error when folderId is not valid', function () {
+      const newNote = {
+        'title': 'Test note created by chai',
+        'content': 'This note was created for testing purposes only',
+        'folderId': 'DOES-NOT-EXIST' 
+      };
+
+      return chai.request(app)
+        .post('/api/notes')
+        .send(newNote)
+        .then(function (res) {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('The `folderId` is not valid');
         });
     });
   });
@@ -231,7 +255,7 @@ describe('Notes Integration Tests', function () {
           expect(note.updatedAt.getTime()).to.not.equal(originalData.updatedAt.getTime());
         });
     });
-    it('should throw an error when given invalid data', function () {
+    it('should throw an error when `title` is missing', function () {
       const updateData = { content: 'This note doesn not have a title' };
 
       let originalData;
@@ -256,6 +280,40 @@ describe('Notes Integration Tests', function () {
           expect(note.id).to.equal(originalData.id);
           expect(note.title).to.equal(originalData.title);
           expect(note.content).to.equal(originalData.content);
+          expect(note.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
+          expect(note.updatedAt.getTime()).to.equal(originalData.updatedAt.getTime());
+        });
+    });
+
+    it('should throw an error when folderId is not valid', function () {
+      const updateData = {
+        'title': 'Test note updated by chai',
+        'content': 'This note was updated for testing purposes only',
+        'folderId': 'DOES-NOT-EXIST' 
+      };
+
+      let originalData;
+
+      return Note.findOne()
+        .then(data => {
+          originalData = data;
+          return chai.request(app)
+            .put(`/api/notes/${originalData._id}`)
+            .send(updateData);
+        })
+        .then(function (res) {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('The `folderId` is not valid');
+          return Note.findById(originalData.id);
+        })
+        .then(note => {
+          expect(note.id).to.equal(originalData.id);
+          expect(note.title).to.equal(originalData.title);
+          expect(note.content).to.equal(originalData.content);
+          expect(note.folderId).to.deep.equal(originalData.folderId);
           expect(note.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
           expect(note.updatedAt.getTime()).to.equal(originalData.updatedAt.getTime());
         });

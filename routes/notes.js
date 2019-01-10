@@ -51,13 +51,19 @@ router.get('/:id', (req, res, next) => {
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const { title, content } = req.body;
+  const { title, content, folderId } = req.body;
 
-  const newNote = { title, content };
+  const newNote = { title, content, folderId };
 
   /***** Never trust users - validate input *****/
   if (!newNote.title) {
     const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The `folderId` is not valid');
     err.status = 400;
     return next(err);
   }
@@ -78,7 +84,7 @@ router.put('/:id', (req, res, next) => {
   const { id } = req.params;
 
   const updateObj = {};
-  const updateableFields = ['title', 'content'];
+  const updateableFields = ['title', 'content', 'folderId'];
 
   updateableFields.forEach(field => {
     if (field in req.body) {
@@ -95,6 +101,12 @@ router.put('/:id', (req, res, next) => {
 
   if (!updateObj.title) {
     const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (updateObj.folderId && !mongoose.Types.ObjectId.isValid(updateObj.folderId)) {
+    const err = new Error('The `folderId` is not valid');
     err.status = 400;
     return next(err);
   }
