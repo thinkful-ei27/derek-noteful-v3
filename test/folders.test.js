@@ -21,7 +21,10 @@ describe('Folders Integration Tests', function () {
   });
 
   beforeEach(function () {
-    return Folder.insertMany(folders);
+    return Promise.all([
+      Folder.insertMany(folders),
+      Folder.createIndexes()
+    ]);
   });
 
   afterEach(function () {
@@ -74,6 +77,7 @@ describe('Folders Integration Tests', function () {
       let data;
       return Folder.findOne()
         .then(_data => {
+          console.log(_data);
           data = _data;
           return chai.request(app).get(`/api/folders/${data.id}`);
         })
@@ -90,23 +94,187 @@ describe('Folders Integration Tests', function () {
         });
     });
 
-    it('should return a 404 error when it cannot find a folder');
+    it('should return a 404 error when it cannot find a folder', function () {
+      let badId = '111111111111111111111199';
+
+      return chai.request(app).get(`/api/folders/${badId}`)
+        .then(res => {
+          expect(res).to.have.status(404);
+        });
+    });
   });
 
   describe('POST /api/folders', function () {
-    it('should create and return a new folder when provided with valid data');
-    it('should throw an error when provided with invalid data');
-    it('should warn the user if the folder name already exists');
+    it('should create and return a new folder when provided with valid data', function () {
+      const newFolder = {
+        'name': 'Test folder created by chai'
+      };
+
+      let res;
+      return chai.request(app)
+        .post('/api/folders')
+        .send(newFolder)
+        .then(function (_res) {
+          res = _res;
+          expect(res).to.have.status(201);
+          expect(res).to.have.header('location');
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+          return Folder.findById(res.body.id);
+        })
+        .then(data => {
+          expect(res.body.id).to.equal(data.id);
+          expect(res.body.name).to.equal(data.name);
+          expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
+          expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
+        });
+    });
+
+    it('should throw an error when provided with invalid data', function () {
+      const newFolder = {};
+      return chai.request(app)
+        .post('/api/folders')
+        .send(newFolder)
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('Missing `name` in request body');
+        });
+    });
+
+    it('should warn the user if the folder name already exists', function () {
+      return Folder.findOne()
+        .then(existingFolder => {
+          const newFolder = { name: existingFolder.name };
+          return chai.request(app)
+            .post('/api/folders')
+            .send(newFolder);
+        })
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('The folder name already exists');
+        });
+    });
   });
 
   describe('PUT /api/folders/:id', function () {
-    it('should update the folder when provided with valid data');
-    it('should throw an error when provided invalid data');
-    it('should warn the user if the folder name already exists');
+    it('should update the folder when provided with valid data', function () {
+      const updateData = {
+        name: 'Folder updated by chai'
+      };
+
+      let originalData;
+
+      return Folder.findOne()
+        .then(data => {
+          originalData = data;
+          return chai.request(app)
+            .put(`/api/folders/${originalData._id}`)
+            .send(updateData);
+        })
+        .then(res => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+
+          return Folder.findById(res.body.id);
+        })
+        .then(folder => {
+          expect(folder.id).to.equal(originalData.id);
+          expect(folder.name).to.equal(updateData.name);
+          expect(folder.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
+          expect(folder.updatedAt.getTime()).to.not.equal(originalData.updatedAt.getTime());
+        });
+    });
+
+    it('should throw an error when provided invalid data', function () {
+      const updateData = {};
+
+      let originalData;
+
+      return Folder.findOne()
+        .then(data => {
+          originalData = data;
+          return chai.request(app)
+            .put(`/api/folders/${originalData._id}`)
+            .send(updateData);
+        })
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('Missing `name` in request body');
+
+          return Folder.findById(originalData.id);
+        })
+        .then(folder => {
+          expect(folder.id).to.equal(originalData.id);
+          expect(folder.name).to.equal(originalData.name);
+          expect(folder.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
+          expect(folder.updatedAt.getTime()).to.equal(originalData.updatedAt.getTime());
+        });
+    });
+
+    it('should warn the user if the folder name already exists', function () {
+      const updateData = {};
+      let existingName;
+
+      return Folder.findOne()
+        .sort({ name: 'asc' })
+        .then(existingFolder => {
+          existingName = existingFolder.name;
+          return Folder.findOne().sort({ name: 'desc' });
+        })
+        .then(data => {
+          updateData.name = existingName;
+          return chai.request(app)
+            .put(`/api/folders/${data.id}`)
+            .send(updateData);
+        })
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('The folder name already exists');
+        });
+    });
   });
 
-  describe('DELETE /api/notes', function () {
-    it('should delete a folder');
-    it('should respond with an error if given a bad id');
+  describe('DELETE /api/folders', function () {
+    it('should delete a folder', function () {
+      let folder;
+
+      return Folder.findOne()
+        .then(data => {
+          folder = data;
+
+          return chai.request(app)
+            .del(`/api/folders/${folder.id}`);
+        })
+        .then(res => {
+          expect(res).to.have.status(204);
+
+          return Folder.findById(folder.id);
+        })
+        .then(res => {
+          expect(res).to.not.exist;
+        });
+    });
+    it('should respond with an error if given a bad id', function () {
+      return chai.request(app)
+        .del('/api/folders/999')
+        .then(res => {
+          expect(res).to.throw;
+        });
+    });
   });
 });
