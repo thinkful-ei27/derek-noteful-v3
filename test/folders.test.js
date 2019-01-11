@@ -176,7 +176,7 @@ describe('Folders Integration Tests', function () {
   });
 
   describe('PUT /api/folders/:id', function () {
-    it('should update the folder when provided with valid data', function () {
+    it('should update the folder when provided with valid data and return the updated folder', function () {
       const updateData = {
         name: 'Folder updated by chai'
       };
@@ -195,6 +195,10 @@ describe('Folders Integration Tests', function () {
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
           expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+          expect(res.body.id).to.equal(originalData.id);
+          expect(res.body.name).to.equal(updateData.name);
+          expect(new Date(res.body.createdAt).getTime()).to.equal(originalData.createdAt.getTime());
+          expect(new Date(res.body.updatedAt).getTime()).to.not.equal(originalData.updatedAt.getTime());
 
           return Folder.findById(res.body.id);
         })
@@ -328,16 +332,14 @@ describe('Folders Integration Tests', function () {
         });
     });
 
-    it('should respond with an error if given a bad id', function () {
-      const updateData = {
-        name: 'Folder updated by chai'
-      };
+    it('should throw an error if given a bad id', function () {
+      const invalidId = '999';
 
       return chai.request(app)
-        .put('/api/folders/999')
-        .send(updateData)
+        .put(`/api/folders/${invalidId}`)
         .then(res => {
-          expect(res).to.throw;
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
         });
     });
   });

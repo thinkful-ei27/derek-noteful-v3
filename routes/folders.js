@@ -90,7 +90,7 @@ router.put('/:id', (req, res, next) => {
   }
 
   Folder
-    .findByIdAndUpdate(id, updateObj)
+    .findByIdAndUpdate(id, updateObj, { new: true })
     .then(folder => res.json(folder))
     .catch(err => {
       if (err.code === 11000) {

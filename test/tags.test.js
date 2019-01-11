@@ -10,8 +10,9 @@ const app = require('../server');
 const { TEST_MONGODB_URI, MONGOOSE_OPTIONS } = require('../config');
 
 const Tag = require('../models/tags');
+const Note = require('../models/note');
 
-const { tags } = require('../db/data');
+const { tags, notes } = require('../db/data');
 
 describe('Tags Integration Tests', function () {
   before(function () {
@@ -22,6 +23,7 @@ describe('Tags Integration Tests', function () {
   beforeEach(function () {
     return Promise.all([
       Tag.insertMany(tags),
+      Note.insertMany(notes),
       Tag.createIndexes()
     ]);
   });
@@ -173,7 +175,7 @@ describe('Tags Integration Tests', function () {
   });
 
   describe('PUT /api/tags/:id', function () {
-    it('should update the tag when provided with valid data', function () {
+    it('should update the tag when provided with valid data and return the updated tag', function () {
       const updateData = {
         name: 'Tag updated by chai'
       };
@@ -192,6 +194,10 @@ describe('Tags Integration Tests', function () {
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
           expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+          expect(res.body.id).to.equal(originalData.id);
+          expect(res.body.name).to.equal(updateData.name);
+          expect(new Date(res.body.createdAt).getTime()).to.equal(originalData.createdAt.getTime());
+          expect(new Date(res.body.updatedAt).getTime()).to.not.equal(originalData.updatedAt.getTime());
 
           return Tag.findById(res.body.id);
         })
@@ -274,8 +280,59 @@ describe('Tags Integration Tests', function () {
   });
 
   describe('DELETE /api/tags/:id', function () {
-    it('should delete a tag');
-    it('should remove the tag from all notes that had that tag');
-    it('should throw an error if given a bad id');
+    it('should delete a tag', function () {
+      let tag;
+
+      return Tag.findOne()
+        .then(data => {
+          tag = data;
+
+          return chai.request(app)
+            .del(`/api/tags/${tag.id}`);
+        })
+        .then(res => {
+          expect(res).to.have.status(204);
+
+          return Tag.findById(tag.id);
+        })
+        .then(res => {
+          expect(res).to.not.exist;
+        });
+    });
+
+    it('should remove the tag from all notes that had that tag', function () {
+      let tag;
+
+      return Tag.findOne()
+        .then(data => {
+          tag = data;
+
+          return Note.countDocuments({ tags: tag.id });
+        })
+        .then(count => {
+          expect(count).to.not.equal(0);
+
+          return chai.request(app)
+            .del(`/api/tags/${tag.id}`);
+        })
+        .then(res => {
+          expect(res).to.have.status(204);
+
+          return Note.countDocuments({ tags: tag.id });
+        })
+        .then(count => {
+          expect(count).to.equal(0);
+        });
+    });
+    it('should throw an error if given a bad id', function () {
+      const invalidId = '999';
+
+      return chai.request(app)
+        .del(`/api/tags/${invalidId}`)
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
+        });
+    });
   });
 });

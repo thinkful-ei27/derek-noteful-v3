@@ -238,7 +238,7 @@ describe('Notes Integration Tests', function () {
   });
 
   describe('PUT /api/notes/:id', function () {
-    it('should update the note when provided valid data', function () {
+    it('should update the note when provided valid data and return the updated note', function () {
       const updateData = {
         title: 'Title updated by chai',
         content: 'This note is being updated by a chai test'
@@ -258,6 +258,11 @@ describe('Notes Integration Tests', function () {
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
           expect(res.body).to.have.keys(NOTE_KEYS);
+          expect(res.body.id).to.equal(originalData.id);
+          expect(res.body.title).to.equal(updateData.title);
+          expect(res.body.content).to.equal(updateData.content);
+          expect(new Date(res.body.createdAt).getTime()).to.equal(originalData.createdAt.getTime());
+          expect(new Date(res.body.updatedAt).getTime()).to.not.equal(originalData.updatedAt.getTime());
 
           return Note.findById(res.body.id);
         })

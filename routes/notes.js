@@ -112,7 +112,7 @@ router.put('/:id', (req, res, next) => {
   }
 
   Note
-    .findByIdAndUpdate(id, updateObj)
+    .findByIdAndUpdate(id, updateObj, { new: true })
     .then(note => res.json(note))
     .catch(err => next(err));
 });
