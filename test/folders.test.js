@@ -146,7 +146,7 @@ describe('Folders Integration Tests', function () {
         });
     });
 
-    it('should warn the user if the folder name already exists', function () {
+    it('should throw an error if the folder name already exists', function () {
       return Folder.findOne()
         .then(existingFolder => {
           const newFolder = { name: existingFolder.name };
@@ -249,7 +249,7 @@ describe('Folders Integration Tests', function () {
         });
     });
 
-    it('should respond with an error if given a bad id', function () {
+    it('should throw an error if given a bad id', function () {
       return chai.request(app)
         .del('/api/folders/999')
         .then(res => {
@@ -258,7 +258,7 @@ describe('Folders Integration Tests', function () {
     });
   });
 
-  describe('DELETE /api/folders', function () {
+  describe('DELETE /api/folders/:id', function () {
     it('should delete a folder', function () {
       let folder;
 
