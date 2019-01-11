@@ -116,7 +116,7 @@ describe('Tags Integration Tests', function () {
   describe('POST /api/tags/', function () {
     it('should create and return a new tag when provided with valid data', function () {
       const newTag = {
-        'name': 'Test folder created by chai'
+        'name': 'Test tag created by chai'
       };
 
       let res;
@@ -173,10 +173,104 @@ describe('Tags Integration Tests', function () {
   });
 
   describe('PUT /api/tags/:id', function () {
-    it('should update the tag when provided with valid data');
-    it('should throw an error when provided invalid data');
-    it('should throw an error if the tag name already exists');
-    it('should throw an error if given a bad id');
+    it('should update the tag when provided with valid data', function () {
+      const updateData = {
+        name: 'Tag updated by chai'
+      };
+
+      let originalData;
+
+      return Tag.findOne()
+        .then(data => {
+          originalData = data;
+          return chai.request(app)
+            .put(`/api/tags/${originalData._id}`)
+            .send(updateData);
+        })
+        .then(res => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+
+          return Tag.findById(res.body.id);
+        })
+        .then(tag => {
+          expect(tag.id).to.equal(originalData.id);
+          expect(tag.name).to.equal(updateData.name);
+          expect(tag.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
+          expect(tag.updatedAt.getTime()).to.not.equal(originalData.updatedAt.getTime());
+        });
+    });
+
+    it('should throw an error when provided invalid data', function () {
+      const updateData = {};
+
+      let originalData;
+
+      return Tag.findOne()
+        .then(data => {
+          originalData = data;
+          return chai.request(app)
+            .put(`/api/tags/${originalData._id}`)
+            .send(updateData);
+        })
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('Missing `name` in request body');
+
+          return Tag.findById(originalData.id);
+        })
+        .then(tag => {
+          expect(tag.id).to.equal(originalData.id);
+          expect(tag.name).to.equal(originalData.name);
+          expect(tag.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
+          expect(tag.updatedAt.getTime()).to.equal(originalData.updatedAt.getTime());
+        });
+    });
+
+    it('should throw an error if the tag name already exists', function () {
+      const updateData = {};
+      let existingName;
+
+      return Tag.findOne()
+        .sort({ name: 'asc' })
+        .then(existingTag => {
+          existingName = existingTag.name;
+          return Tag.findOne().sort({ name: 'desc' });
+        })
+        .then(data => {
+          updateData.name = existingName;
+          return chai.request(app)
+            .put(`/api/tags/${data.id}`)
+            .send(updateData);
+        })
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('That tag name already exists');
+        });
+    });
+
+    it('should throw an error if given a bad id', function () {
+      const updateData = {
+        name: 'Tag updated by chai'
+      };
+      const invalidId = '999';
+
+      return chai.request(app)
+        .put(`/api/tags/${invalidId}`)
+        .send(updateData)
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
+        });
+    });
   });
 
   describe('DELETE /api/tags/:id', function () {

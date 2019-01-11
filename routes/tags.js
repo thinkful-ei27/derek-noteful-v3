@@ -64,6 +64,42 @@ router.post('/', (req, res, next) => {
 });
 
 // UPDATE A TAG
+router.put('/:id', (req, res, next) => {
+  const { id } = req.params;
+
+  const updateObj = {};
+  const updateableFields = ['name'];
+
+  updateableFields.forEach(field => {
+    if (field in req.body) {
+      updateObj[field] = req.body[field];
+    }
+  });
+
+  /***** Never trust users - validate input *****/
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (!updateObj.name) {
+    const err = new Error('Missing `name` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  Tag
+    .findByIdAndUpdate(id, updateObj)
+    .then(tag => res.json(tag))
+    .catch(err => {
+      if (err.code === 11000) {
+        err = new Error('That tag name already exists');
+        err.status = 400;
+      }
+      next(err);
+    });
+});
 
 // DELETE A TAG
 

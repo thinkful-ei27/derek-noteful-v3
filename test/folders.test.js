@@ -261,10 +261,17 @@ describe('Folders Integration Tests', function () {
     });
 
     it('should throw an error if given a bad id', function () {
+      const updateData = {
+        name: 'Folder updated by chai'
+      };
+      const invalidId = '999';
+
       return chai.request(app)
-        .del('/api/folders/999')
+        .put(`/api/folders/${invalidId}`)
+        .send(updateData)
         .then(res => {
-          expect(res).to.throw;
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
         });
     });
   });
