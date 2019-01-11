@@ -34,6 +34,34 @@ router.get('/:id', (req, res, next) => {
 });
 
 // CREATE A TAG
+router.post('/', (req, res, next) => {
+  const { name } = req.body;
+
+  const newTag = { name };
+
+  /***** Never trust users - validate input *****/
+  if (!newTag.name) {
+    const err = new Error('Missing `name` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  Tag
+    .create(newTag)
+    .then(tag => {
+      res
+        .location(`${req.originalUrl}/${tag.id}`)
+        .status(201)
+        .json(tag);
+    })
+    .catch(err => {
+      if (err.code === 11000) {
+        err = new Error('That tag name already exists');
+        err.status = 400;
+      }
+      next(err);
+    });
+});
 
 // UPDATE A TAG
 

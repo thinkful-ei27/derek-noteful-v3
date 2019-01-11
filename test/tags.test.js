@@ -114,9 +114,62 @@ describe('Tags Integration Tests', function () {
   });
 
   describe('POST /api/tags/', function () {
-    it('should create and return a new tag when provided with valid data');
-    it('should throw an error when provided with invalid data');
-    it('should throw an error when the tag name already exists');
+    it('should create and return a new tag when provided with valid data', function () {
+      const newTag = {
+        'name': 'Test folder created by chai'
+      };
+
+      let res;
+      return chai.request(app)
+        .post('/api/tags')
+        .send(newTag)
+        .then(function (_res) {
+          res = _res;
+          expect(res).to.have.status(201);
+          expect(res).to.have.header('location');
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+          return Tag.findById(res.body.id);
+        })
+        .then(data => {
+          expect(res.body.id).to.equal(data.id);
+          expect(res.body.name).to.equal(data.name);
+          expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
+          expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
+        });
+    });
+
+    it('should throw an error when provided with invalid data', function () {
+      const newTest = {};
+      return chai.request(app)
+        .post('/api/tags')
+        .send(newTest)
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('Missing `name` in request body');
+        });
+    });
+
+    it('should throw an error when the tag name already exists', function () {
+      return Tag.findOne()
+        .then(existingTag => {
+          const newTag = { name: existingTag.name };
+          return chai.request(app)
+            .post('/api/tags')
+            .send(newTag);
+        })
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('That tag name already exists');
+        });
+    });
   });
 
   describe('PUT /api/tags/:id', function () {
