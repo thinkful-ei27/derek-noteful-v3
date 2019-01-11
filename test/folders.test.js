@@ -6,7 +6,7 @@ const expect = chai.expect;
 const mongoose = require('mongoose');
 
 const app = require('../server');
-const { TEST_MONGODB_URI } = require('../config');
+const { TEST_MONGODB_URI, MONGOOSE_OPTIONS } = require('../config');
 
 const Folder = require('../models/folders');
 const Note = require('../models/note');
@@ -17,7 +17,7 @@ chai.use(chaiHttp);
 
 describe('Folders Integration Tests', function () {
   before(function () {
-    return mongoose.connect(TEST_MONGODB_URI, { useNewUrlParser: true, useFindAndModify: false })
+    return mongoose.connect(TEST_MONGODB_URI, MONGOOSE_OPTIONS)
       .then(() => mongoose.connection.db.dropDatabase());
   });
 

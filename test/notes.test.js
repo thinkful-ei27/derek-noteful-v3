@@ -5,7 +5,7 @@ const chaiHttp = require('chai-http');
 const mongoose = require('mongoose');
 
 const app = require('../server');
-const { TEST_MONGODB_URI } = require('../config');
+const { TEST_MONGODB_URI, MONGOOSE_OPTIONS } = require('../config');
 
 const Note = require('../models/note');
 const Folder = require('../models/folders');
@@ -15,9 +15,11 @@ const { notes, folders } = require('../db/data');
 const expect = chai.expect;
 chai.use(chaiHttp);
 
+const NOTE_KEYS = ['id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId', 'tags'];
+
 describe('Notes Integration Tests', function () {
   before(function () {
-    return mongoose.connect(TEST_MONGODB_URI, { useNewUrlParser: true, useFindAndModify: false })
+    return mongoose.connect(TEST_MONGODB_URI, MONGOOSE_OPTIONS)
       .then(() => mongoose.connection.db.dropDatabase());
   });
 
@@ -132,7 +134,7 @@ describe('Notes Integration Tests', function () {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId');
+          expect(res.body).to.have.keys(NOTE_KEYS);
 
           // 3) then compare database results to API response
           expect(res.body.id).to.equal(data.id);
@@ -184,7 +186,7 @@ describe('Notes Integration Tests', function () {
           expect(res).to.have.header('location');
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId');
+          expect(res.body).to.have.keys(NOTE_KEYS);
           // 2) then call the database
           return Note.findById(res.body.id);
         })
@@ -252,7 +254,7 @@ describe('Notes Integration Tests', function () {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId');
+          expect(res.body).to.have.keys(NOTE_KEYS);
 
           return Note.findById(res.body.id);
         })

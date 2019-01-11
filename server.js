@@ -4,7 +4,7 @@ const express = require('express');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 
-const { PORT, MONGODB_URI } = require('./config');
+const { PORT, MONGODB_URI, MONGOOSE_OPTIONS } = require('./config');
 
 const notesRouter = require('./routes/notes');
 const foldersRouter = require('./routes/folders');
@@ -48,7 +48,7 @@ app.use((err, req, res, next) => {
 // Listen for incoming connections
 if (require.main === module) {
   // Connect to DB and Listen for incoming connections
-  mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useFindAndModify: false })
+  mongoose.connect(MONGODB_URI, MONGOOSE_OPTIONS)
     .catch(err => {
       console.error(`ERROR: ${err.message}`);
       console.error('\n === Did you remember to start `mongod`? === \n');
