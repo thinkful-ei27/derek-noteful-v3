@@ -248,6 +248,14 @@ describe('Folders Integration Tests', function () {
           expect(res.body.message).to.equal('The folder name already exists');
         });
     });
+
+    it('should respond with an error if given a bad id', function () {
+      return chai.request(app)
+        .del('/api/folders/999')
+        .then(res => {
+          expect(res).to.throw;
+        });
+    });
   });
 
   describe('DELETE /api/folders', function () {
@@ -297,8 +305,13 @@ describe('Folders Integration Tests', function () {
     });
 
     it('should respond with an error if given a bad id', function () {
+      const updateData = {
+        name: 'Folder updated by chai'
+      };
+
       return chai.request(app)
-        .del('/api/folders/999')
+        .put('/api/folders/999')
+        .send(updateData)
         .then(res => {
           expect(res).to.throw;
         });
