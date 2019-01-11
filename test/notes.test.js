@@ -296,6 +296,20 @@ describe('Notes Integration Tests', function () {
         });
     });
 
+    it('should respond with an error if given a bad id', function () {
+      const updateData = {
+        title: 'Title updated by chai',
+        content: 'This note is being updated by a chai test'
+      };
+
+      return chai.request(app)
+        .put('/api/notes/999')
+        .send(updateData)
+        .then(res => {
+          expect(res).to.have.status(400);
+        });
+    });
+
     it('should throw an error when folderId is not valid', function () {
       const updateData = {
         'title': 'Test note updated by chai',
