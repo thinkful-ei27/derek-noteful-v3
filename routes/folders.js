@@ -113,7 +113,7 @@ router.delete('/:id', (req, res, next) => {
 
   Promise.all([
     Folder.findByIdAndDelete(id),
-    Note.deleteMany({ folderId: id })
+    Note.updateMany({ folderId: id }, { $unset: { folderId: '' }})
   ])
     .then(() => res.sendStatus(204))
     .catch(err => next(err));

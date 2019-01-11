@@ -142,12 +142,21 @@ describe('Notes Integration Tests', function () {
           expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
         });
     });
+
     it('should return a 404 error when it cannot find a note', function () {
       let badId = '111111111111111111111199';
 
       return chai.request(app).get(`/api/notes/${badId}`)
         .then(res => {
           expect(res).to.have.status(404);
+        });
+    });
+
+    it('should respond with an error if given a bad id', function () {
+      return chai.request(app)
+        .get('/api/notes/999')
+        .then(res => {
+          expect(res).to.have.status(400);
         });
     });
   });
@@ -340,6 +349,7 @@ describe('Notes Integration Tests', function () {
           expect(res).to.not.exist;
         });
     });
+
     it('should respond with an error if given a bad id', function () {
       return chai.request(app)
         .del('/api/notes/999')

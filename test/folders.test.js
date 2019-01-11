@@ -279,17 +279,19 @@ describe('Folders Integration Tests', function () {
         });
     });
 
-    it('should remove all notes in the folder', function () {
+    it('should set the `folderId` of all notes in the folder to null', function () {
       let folder;
+      let notes;
 
       return Folder.findOne()
         .then(data => {
           folder = data;
 
-          return Note.countDocuments({ folderId: folder.id });
+          return Note.find({ folderId: folder.id });
         })
-        .then(count => {
-          expect(count).to.not.equal(0);
+        .then(_notes => {
+          notes = _notes;
+          expect(notes.length).to.not.equal(0);
 
           return chai.request(app)
             .del(`/api/folders/${folder.id}`);
@@ -297,10 +299,14 @@ describe('Folders Integration Tests', function () {
         .then(res => {
           expect(res).to.have.status(204);
 
-          return Note.countDocuments({ folderId: folder.id });
+          return Promise.all([
+            Note.countDocuments({ folderId: { $exists: false } }),
+            Note.countDocuments({ folderId: folder.id })
+          ]);
         })
-        .then(newCount => {
-          expect(newCount).to.equal(0);
+        .then(([nullCount, folderCount]) => {
+          expect(nullCount).to.equal(notes.length);
+          expect(folderCount).to.equal(0);
         });
     });
 
