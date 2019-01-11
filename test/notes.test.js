@@ -154,11 +154,14 @@ describe('Notes Integration Tests', function () {
         });
     });
 
-    it('should respond with an error if given a bad id', function () {
+    it('should throw an error if given a bad id', function () {
+      const invalidId = '999';
+
       return chai.request(app)
-        .get('/api/notes/999')
+        .get(`/api/notes/${invalidId}`)
         .then(res => {
           expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
         });
     });
   });

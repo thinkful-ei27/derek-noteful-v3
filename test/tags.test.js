@@ -48,6 +48,7 @@ describe('Tags Integration Tests', function () {
           expect(res.body).to.have.length(data.length);
         });
     });
+
     it('should return a list with the correct fields sorted by name', function () {
       return Promise.all([
         Tag.find().sort({ name: 'asc' }),
@@ -71,8 +72,45 @@ describe('Tags Integration Tests', function () {
   });
 
   describe('GET /api/tags/:id', function () {
-    it('should return the correct tag');
-    it('should return a 404 error when it cannot find a tag');
+    it('should return the correct tag', function () {
+      let data;
+      return Tag.findOne()
+        .then(_data => {
+          data = _data;
+          return chai.request(app).get(`/api/tags/${data.id}`);
+        })
+        .then(res => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+
+          expect(res.body.id).to.equal(data.id);
+          expect(res.body.name).to.equal(data.name);
+          expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
+          expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
+        });
+    });
+
+    it('should return a 404 error when it cannot find a tag', function () {
+      let badId = '111111111111111111111199';
+
+      return chai.request(app).get(`/api/tags/${badId}`)
+        .then(res => {
+          expect(res).to.have.status(404);
+        });
+    });
+
+    it('should throw an error if given a bad id', function () {
+      const invalidId = '999';
+
+      return chai.request(app)
+        .get(`/api/tags/${invalidId}`)
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
+        });
+    });
   });
 
   describe('POST /api/tags/', function () {

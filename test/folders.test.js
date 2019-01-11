@@ -103,6 +103,17 @@ describe('Folders Integration Tests', function () {
           expect(res).to.have.status(404);
         });
     });
+
+    it('should throw an error if given a bad id', function () {
+      const invalidId = '999';
+
+      return chai.request(app)
+        .get(`/api/folders/${invalidId}`)
+        .then(res => {
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('The `id` is not valid');
+        });
+    });
   });
 
   describe('POST /api/folders', function () {
