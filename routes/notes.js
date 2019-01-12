@@ -58,8 +58,13 @@ router.get('/:id', (req, res, next) => {
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
   const { title, content, folderId, tags } = req.body;
-
-  const newNote = { title, content, folderId, tags };
+  
+  const newNote = { 
+    title, content, 
+    folderId: folderId ? folderId : null, 
+    tags 
+  };
+  console.log(newNote.folderId ? 'It sees a folderId' : 'It does not see a folderId');
 
   /***** Never trust users - validate input *****/
   if (!newNote.title) {
@@ -126,6 +131,11 @@ router.put('/:id', (req, res, next) => {
     const err = new Error('The `folderId` is not valid');
     err.status = 400;
     return next(err);
+  }
+
+  if (req.body.folderId === '') {
+    delete updateObj.folderId;
+    updateObj.$unset = { folderId: '' };
   }
 
   if (updateObj.tags) {
