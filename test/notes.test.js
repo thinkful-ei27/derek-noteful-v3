@@ -9,8 +9,9 @@ const { TEST_MONGODB_URI, MONGOOSE_OPTIONS } = require('../config');
 
 const Note = require('../models/note');
 const Folder = require('../models/folders');
+const Tag = require('../models/tags');
 
-const { notes, folders } = require('../db/data');
+const { notes, folders, tags } = require('../db/data');
 
 const expect = chai.expect;
 chai.use(chaiHttp);
@@ -27,7 +28,9 @@ describe('Notes Integration Tests', function () {
     return Promise.all([
       Note.insertMany(notes),
       Folder.insertMany(folders),
-      Folder.createIndexes()
+      Tag.insertMany(tags),
+      Folder.createIndexes(),
+      Tag.createIndexes()
     ]);
   });
 
@@ -58,7 +61,7 @@ describe('Notes Integration Tests', function () {
 
     it('should return a list with the correct right fields', function () {
       return Promise.all([
-        Note.find().sort({ updatedAt: 'desc' }),
+        Note.find().populate('tags').sort({ updatedAt: 'desc' }),
         chai.request(app).get('/api/notes')
       ])
         .then(([data, res]) => {
@@ -67,13 +70,23 @@ describe('Notes Integration Tests', function () {
           expect(res.body).to.be.a('array');
           expect(res.body).to.have.length(data.length);
           res.body.forEach(function (item, i) {
+            const note = data[i];
             expect(item).to.be.a('object');
-            expect(item).to.include.all.keys('id', 'title', 'createdAt', 'updatedAt');
-            expect(item.id).to.equal(data[i].id);
-            expect(item.title).to.equal(data[i].title);
-            expect(item.content).to.equal(data[i].content);
-            expect(new Date(item.createdAt)).to.deep.equal(data[i].createdAt);
-            expect(new Date(item.updatedAt)).to.deep.equal(data[i].updatedAt);
+            expect(item).to.have.keys(NOTE_KEYS);
+            expect(item.id).to.equal(note.id);
+            expect(item.title).to.equal(note.title);
+            expect(item.content).to.equal(note.content);
+            expect(item.tags).to.be.an('array');
+            item.tags.forEach((tag, j) => {
+              expect(tag).to.be.an('object');
+              expect(tag).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+              expect(tag.id).to.equal(note.tags[j].id);
+              expect(tag.name).to.equal(note.tags[j].name);
+              expect(new Date(tag.createdAt)).to.deep.equal(note.tags[j].createdAt);
+              expect(new Date(tag.updatedAt)).to.deep.equal(note.tags[j].updatedAt);
+            });
+            expect(new Date(item.createdAt)).to.deep.equal(note.createdAt);
+            expect(new Date(item.updatedAt)).to.deep.equal(note.updatedAt);
           });
         });
     });
@@ -118,13 +131,35 @@ describe('Notes Integration Tests', function () {
           });
         });
     });
+
+    it('should only return notes with a specific tag', function () {
+      let tagId;
+
+      return Tag.findOne()
+        .then(tag => {
+          tagId = tag.id;
+
+          return Promise.all([
+            Note.find({ tags: tag.id }),
+            chai.request(app).get(`/api/notes/?tagId=${tag.id}`)
+          ]);
+        })
+        .then(([data, res]) => {
+          expect(res.body).to.have.length(data.length);
+          res.body.forEach(note => {
+            expect(note.tags.length).to.not.equal(0);
+          });
+        });
+    });
   });
+
 
   describe('GET /api/notes/:id', function () {
     it('should return the correct note', function () {
       let data;
       // 1) First, call the database
       return Note.findOne()
+        .populate('tags')
         .then(_data => {
           data = _data;
           // 2) then call the API with the ID
@@ -140,6 +175,15 @@ describe('Notes Integration Tests', function () {
           expect(res.body.id).to.equal(data.id);
           expect(res.body.title).to.equal(data.title);
           expect(res.body.content).to.equal(data.content);
+          expect(res.body.tags).to.be.an('array');
+          res.body.tags.forEach((tag, j) => {
+            expect(tag).to.be.an('object');
+            expect(tag).to.have.keys('id', 'name', 'createdAt', 'updatedAt');
+            expect(tag.id).to.equal(data.tags[j].id);
+            expect(tag.name).to.equal(data.tags[j].name);
+            expect(new Date(tag.createdAt)).to.deep.equal(data.tags[j].createdAt);
+            expect(new Date(tag.updatedAt)).to.deep.equal(data.tags[j].updatedAt);
+          });
           expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
           expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
         });
@@ -168,14 +212,20 @@ describe('Notes Integration Tests', function () {
 
   describe('POST /api/notes', function () {
     it('should create and return a new item when provided with valid data', function () {
-      let res;
-      Folder.findOne()
-        .then(folder => {
+      let res, folder, tag;
+      return Promise.all([
+        Folder.findOne(),
+        Tag.findOne()
+      ])
+        .then(([_folder, _tag]) => {
+          folder = _folder;
+          tag = _tag;
 
           const newNote = {
             'title': 'Test note created by chai',
             'content': 'This note was created for testing purposes only',
-            'folderId': folder.id
+            'folderId': folder.id,
+            tags: [tag.id]
           };
 
           // 1) First, call the API
@@ -198,6 +248,10 @@ describe('Notes Integration Tests', function () {
           expect(res.body.id).to.equal(data.id);
           expect(res.body.title).to.equal(data.title);
           expect(res.body.content).to.equal(data.content);
+          expect(res.body.folderId).to.equal(folder.id);
+          expect(res.body.tags).to.be.an('array');
+          expect(res.body.tags.length).to.not.equal(0);
+          expect(res.body.tags[0].id).to.equal(tag.id);
           expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
           expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
         });
@@ -233,6 +287,30 @@ describe('Notes Integration Tests', function () {
           expect(res.body).to.be.an('object');
           expect(res.body).to.have.keys('status', 'message');
           expect(res.body.message).to.equal('The `folderId` is not valid');
+        });
+    });
+
+    it.only('should throw an error when a tag is not valid', function () {
+      const newNote = {
+        'title': 'Test note created by chai',
+        'content': 'This note was created for testing purposes only',
+        'tags': ['DOES-NOT-EXIST']
+      };
+
+      return Tag.findOne()
+        .then(tag => {
+          newNote.tags.push(tag.id);
+
+          return chai.request(app)
+            .post('/api/notes')
+            .send(newNote);
+        })
+        .then(function (res) {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('One of the tags is not valid');
         });
     });
   });

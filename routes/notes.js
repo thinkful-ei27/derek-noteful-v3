@@ -8,13 +8,17 @@ const router = express.Router();
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-  const { searchTerm, folderId } = req.query;
+  const { searchTerm, folderId, tagId } = req.query;
   const regex = new RegExp(searchTerm, 'i');
 
   let filter = {};
 
   if (folderId) {
     filter.folderId = folderId;
+  }
+  
+  if (tagId) {
+    filter.tags = tagId;
   }
 
   if (searchTerm) {
@@ -27,6 +31,7 @@ router.get('/', (req, res, next) => {
   Note
     .find(filter)
     .sort({ updatedAt: 'desc' })
+    .populate('tags')
     .then(notes => res.json(notes))
     .catch(err => next(err));
 });
@@ -43,6 +48,7 @@ router.get('/:id', (req, res, next) => {
 
   Note
     .findById(id)
+    .populate('tags')
     .then(note => {
       return note ? res.json(note) : next();
     })
@@ -51,9 +57,9 @@ router.get('/:id', (req, res, next) => {
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const { title, content, folderId } = req.body;
+  const { title, content, folderId, tags } = req.body;
 
-  const newNote = { title, content, folderId };
+  const newNote = { title, content, folderId, tags };
 
   /***** Never trust users - validate input *****/
   if (!newNote.title) {
@@ -70,6 +76,7 @@ router.post('/', (req, res, next) => {
 
   Note
     .create(newNote)
+    .then(note => note.populate('tags').execPopulate())
     .then(note => {
       res
         .location(`${req.originalUrl}/${note.id}`)
