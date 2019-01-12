@@ -445,6 +445,33 @@ describe('Notes Integration Tests', function () {
           expect(note.updatedAt.getTime()).to.equal(originalData.updatedAt.getTime());
         });
     });
+
+    it.only('should throw an error when a tag is not valid', function () {
+      const updateData = {
+        title: 'Title updated by chai',
+        content: 'This note is being updated by a chai test',
+        tags: ['DOES-NOT-EXIST']
+      };
+
+      return Promise.all([
+        Note.findOne(),
+        Tag.findOne()
+      ])
+        .then(([data, tag]) => {
+          updateData.tags.push(tag.id);
+
+          return chai.request(app)
+            .put(`/api/notes/${data._id}`)
+            .send(updateData);
+        })
+        .then(function (res) {
+          expect(res).to.have.status(400);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('status', 'message');
+          expect(res.body.message).to.equal('One of the tags is not valid');
+        });
+    });
   });
 
   describe('DELETE /api/notes', function () {
