@@ -74,6 +74,16 @@ router.post('/', (req, res, next) => {
     return next(err);
   }
 
+  if (tags) {
+    tags.forEach(tag => {
+      if (!mongoose.Types.ObjectId.isValid(tag)) {
+        const err = new Error('One of the tags is not valid');
+        err.status = 400;
+        return next(err);
+      } 
+    });
+  }
+
   Note
     .create(newNote)
     .then(note => note.populate('tags').execPopulate())

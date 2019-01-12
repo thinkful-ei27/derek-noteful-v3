@@ -290,7 +290,7 @@ describe('Notes Integration Tests', function () {
         });
     });
 
-    it.only('should throw an error when a tag is not valid', function () {
+    it('should throw an error when a tag is not valid', function () {
       const newNote = {
         'title': 'Test note created by chai',
         'content': 'This note was created for testing purposes only',
