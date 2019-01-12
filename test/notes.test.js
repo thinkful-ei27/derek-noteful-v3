@@ -228,7 +228,6 @@ describe('Notes Integration Tests', function () {
             tags: [tag.id]
           };
 
-          // 1) First, call the API
           return chai.request(app)
             .post('/api/notes')
             .send(newNote);
@@ -240,10 +239,8 @@ describe('Notes Integration Tests', function () {
           expect(res).to.be.json;
           expect(res.body).to.be.an('object');
           expect(res.body).to.have.keys(NOTE_KEYS);
-          // 2) then call the database
           return Note.findById(res.body.id);
         })
-        // 3) then compare the API response to the database results
         .then(data => {
           expect(res.body.id).to.equal(data.id);
           expect(res.body.title).to.equal(data.title);
@@ -316,17 +313,28 @@ describe('Notes Integration Tests', function () {
   });
 
   describe('PUT /api/notes/:id', function () {
-    it('should update the note when provided valid data and return the updated note', function () {
+    it.only('should update the note when provided valid data and return the updated note', function () {
       const updateData = {
         title: 'Title updated by chai',
         content: 'This note is being updated by a chai test'
       };
 
-      let originalData;
+      let originalData, folder, tag;
 
-      return Note.findOne()
-        .then(data => {
+      return Promise.all([
+        Note.findOne(),
+        Folder.findOne(),
+        Tag.findOne()
+      ])
+        .then(([data, _folder, _tag]) => {
+          folder = _folder;
+          tag = _tag;
+
+          updateData.folderId = folder.id;
+          updateData.tags = tag.id;
+
           originalData = data;
+
           return chai.request(app)
             .put(`/api/notes/${originalData._id}`)
             .send(updateData);
@@ -339,6 +347,10 @@ describe('Notes Integration Tests', function () {
           expect(res.body.id).to.equal(originalData.id);
           expect(res.body.title).to.equal(updateData.title);
           expect(res.body.content).to.equal(updateData.content);
+          expect(res.body.folderId).to.equal(updateData.folderId);
+          expect(res.body.tags).to.be.an('array');
+          expect(res.body.tags.length).to.not.equal(0);
+          expect(res.body.tags[0].id).to.equal(tag.id);
           expect(new Date(res.body.createdAt).getTime()).to.equal(originalData.createdAt.getTime());
           expect(new Date(res.body.updatedAt).getTime()).to.not.equal(originalData.updatedAt.getTime());
 
@@ -348,6 +360,10 @@ describe('Notes Integration Tests', function () {
           expect(note.id).to.equal(originalData.id);
           expect(note.title).to.equal(updateData.title);
           expect(note.content).to.equal(updateData.content);
+          expect(note.folderId).to.equal(updateData.folderId);
+          expect(note.tags).to.be.an('array');
+          expect(note.tags.length).to.not.equal(0);
+          expect(note.tags[0]).to.equal(tag.id);
           expect(note.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
           expect(note.updatedAt.getTime()).to.not.equal(originalData.updatedAt.getTime());
         });
