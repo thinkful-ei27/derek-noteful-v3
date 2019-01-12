@@ -101,7 +101,7 @@ router.put('/:id', (req, res, next) => {
   const { id } = req.params;
 
   const updateObj = {};
-  const updateableFields = ['title', 'content', 'folderId'];
+  const updateableFields = ['title', 'content', 'folderId', 'tags'];
 
   updateableFields.forEach(field => {
     if (field in req.body) {
@@ -130,6 +130,7 @@ router.put('/:id', (req, res, next) => {
 
   Note
     .findByIdAndUpdate(id, updateObj, { new: true })
+    .populate('tags')
     .then(note => res.json(note))
     .catch(err => next(err));
 });

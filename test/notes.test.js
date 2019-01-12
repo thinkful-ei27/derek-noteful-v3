@@ -313,7 +313,7 @@ describe('Notes Integration Tests', function () {
   });
 
   describe('PUT /api/notes/:id', function () {
-    it.only('should update the note when provided valid data and return the updated note', function () {
+    it('should update the note when provided valid data and return the updated note', function () {
       const updateData = {
         title: 'Title updated by chai',
         content: 'This note is being updated by a chai test'
@@ -331,7 +331,7 @@ describe('Notes Integration Tests', function () {
           tag = _tag;
 
           updateData.folderId = folder.id;
-          updateData.tags = tag.id;
+          updateData.tags = [tag.id];
 
           originalData = data;
 
@@ -360,10 +360,10 @@ describe('Notes Integration Tests', function () {
           expect(note.id).to.equal(originalData.id);
           expect(note.title).to.equal(updateData.title);
           expect(note.content).to.equal(updateData.content);
-          expect(note.folderId).to.equal(updateData.folderId);
+          expect(note.folderId.toString()).to.deep.equal(folder.id);
           expect(note.tags).to.be.an('array');
           expect(note.tags.length).to.not.equal(0);
-          expect(note.tags[0]).to.equal(tag.id);
+          expect(note.tags[0].toString()).to.equal(tag.id);
           expect(note.createdAt.getTime()).to.equal(originalData.createdAt.getTime());
           expect(note.updatedAt.getTime()).to.not.equal(originalData.updatedAt.getTime());
         });
