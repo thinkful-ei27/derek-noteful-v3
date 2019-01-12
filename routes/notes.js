@@ -128,6 +128,16 @@ router.put('/:id', (req, res, next) => {
     return next(err);
   }
 
+  if (updateObj.tags) {
+    updateObj.tags.forEach(tag => {
+      if (!mongoose.Types.ObjectId.isValid(tag)) {
+        const err = new Error('One of the tags is not valid');
+        err.status = 400;
+        return next(err);
+      } 
+    });
+  }
+
   Note
     .findByIdAndUpdate(id, updateObj, { new: true })
     .populate('tags')

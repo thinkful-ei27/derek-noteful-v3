@@ -446,7 +446,7 @@ describe('Notes Integration Tests', function () {
         });
     });
 
-    it.only('should throw an error when a tag is not valid', function () {
+    it('should throw an error when a tag is not valid', function () {
       const updateData = {
         title: 'Title updated by chai',
         content: 'This note is being updated by a chai test',
